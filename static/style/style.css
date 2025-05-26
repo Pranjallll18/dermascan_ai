@@ -1,0 +1,119 @@
+/* Global Styling */
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #f4f6f9;
+    color: #333;
+    transition: all 0.3s ease;
+}
+
+h1, h2, h4 {
+    font-weight: 600;
+}
+
+/* Logo */
+img {
+    border-radius: 50%;
+}
+
+/* Form Styling */
+form {
+    max-width: 400px;
+    margin: auto;
+}
+
+input.form-control {
+    border-radius: 10px;
+    padding: 10px;
+    transition: all 0.3s ease;
+}
+
+input.form-control:focus {
+    box-shadow: none;
+    border-color: #00b09b;
+}
+
+/* Button Styles */
+.btn-gradient {
+    background: linear-gradient(to right, #00b09b, #96c93d);
+    border: none;
+    color: white;
+    font-weight: bold;
+    padding: 10px;
+    border-radius: 30px;
+    transition: all 0.3s ease-in-out;
+}
+
+.btn-gradient:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(0, 176, 155, 0.4);
+}
+
+/* Gradient Background */
+.bg-gradient-primary {
+    background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+}
+
+/* Theme Toggle */
+.theme-toggle {
+    z-index: 1000;
+}
+
+/* Dark Mode */
+.dark-mode {
+    background-color: #121212 !important;
+    color: #e0e0e0 !important;
+}
+
+.dark-mode .card,
+.dark-mode .bg-white {
+    background-color: #1e1e1e !important;
+    color: #e0e0e0 !important;
+}
+
+.dark-mode .form-control {
+    background-color: #1f1f1f;
+    color: white;
+    border: 1px solid #555;
+}
+
+.dark-mode .form-control::placeholder {
+    color: #aaa;
+}
+
+.dark-mode .text-muted {
+    color: #bbb !important;
+}
+
+.dark-mode .btn-gradient {
+    background: linear-gradient(to right, #444, #777);
+    color: #fff;
+}
+
+/* Result Page */
+.card {
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    background-color: #ffffff;
+    transition: background-color 0.3s ease;
+}
+
+/* Scan Page Upload */
+input[type="file"] {
+    border: 2px dashed #ccc;
+    padding: 15px;
+    border-radius: 12px;
+    background-color: #fff;
+    cursor: pointer;
+}
+
+input[type="file"]:hover {
+    border-color: #00b09b;
+}
+
+/* Animations */
+.animate__animated {
+    animation-duration: 1s;
+    animation-fill-mode: both;
+}

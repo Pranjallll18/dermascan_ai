@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DermaScan AI - Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="static/style/style.css">
+</head>
+<body class="d-flex justify-content-center align-items-center vh-100 bg-gradient-primary text-dark">
+
+<div class="theme-toggle position-absolute top-0 end-0 p-3">
+    <input type="checkbox" id="darkToggle" class="form-check-input me-1">
+    <label for="darkToggle" class="text-white">🌙 Dark Mode</label>
+</div>
+
+<form method="POST" class="p-4 shadow-lg rounded animate__animated animate__fadeInUp bg-white" id="loginForm">
+    <h4 class="mb-3 text-center fw-bold">🔐 Login to <span class="text-primary">DermaScan AI</span></h4>
+
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <input type="text" name="username" class="form-control mb-3" placeholder="Username" required>
+    <input type="password" name="password" class="form-control mb-4" placeholder="Password" required>
+
+    <button class="btn btn-gradient w-100">Login</button>
+</form>
+
+<script>
+    // Toggle Dark Mode
+    const toggle = document.getElementById('darkToggle');
+    toggle.addEventListener('change', () => {
+        document.body.classList.toggle('dark-mode');
+        document.getElementById('loginForm').classList.toggle('bg-white');
+        document.getElementById('loginForm').classList.toggle('bg-dark');
+        document.getElementById('loginForm').classList.toggle('text-light');
+    });
+</script>
+</body>
+</html>

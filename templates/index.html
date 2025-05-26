@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DermaScan AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- Bootstrap & Animation Libraries -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="static/style/style.css">
+</head>
+<body>
+
+<!-- Dark Mode Toggle -->
+<div class="theme-toggle position-absolute top-0 end-0 p-3">
+    <input type="checkbox" id="darkToggle" class="form-check-input">
+    <label for="darkToggle" class="text-white">🌙 Dark Mode</label>
+</div>
+
+<!-- Main Container -->
+<div class="container d-flex justify-content-center align-items-center vh-100">
+    <div class="card p-4 shadow-lg animate__animated animate__fadeInUp" id="scanCard">
+        <div class="text-center">
+            <img src="/static/img/logo.jpg" alt="logo" width="100" class="mb-3 animate__animated animate__zoomIn">
+            <h2 class="mb-2 animate__animated animate__fadeInDown">DermaScan <span class="text-primary">AI</span></h2>
+            <p class="mb-4">Upload a dermatoscopic image to detect skin cancer</p>
+
+            <!-- Upload Form -->
+            <form id="uploadForm" action="/predict" method="post" enctype="multipart/form-data">
+                <label for="imageInput" class="form-label">Choose or Capture an Image</label>
+
+                <!-- Hidden File Input -->
+                <input type="file" id="imageInput" name="image" accept="image/*" capture="environment" class="form-control d-none" required>
+
+                <!-- Trigger Button -->
+                <button type="button" class="btn btn-outline-primary w-100 mb-3" onclick="document.getElementById('imageInput').click();">
+                    📸 Capture or Select Image
+                </button>
+
+                <!-- Preview Image -->
+                <div class="text-center mb-3">
+                    <img id="imagePreview" src="" alt="Image Preview" class="img-fluid rounded d-none" style="max-height: 300px;">
+                </div>
+
+                <div class="text-muted small mb-3">
+                    📷 On mobile, you can take a photo or choose from the gallery.
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn btn-gradient w-100">🔍 Scan</button>
+            </form>
+
+            <!-- Loader -->
+            <div id="loader" class="mt-4 d-none">
+                <div class="scanner">
+                    <div class="scanner-circle"></div>
+                    <p class="text-center mt-2">Scanning...</p>
+                </div>
+            </div>
+
+            <!-- Logout Button -->
+            <a href="/logout" class="btn btn-outline-danger mt-3 w-100">Logout</a>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+    // Dark Mode Toggle
+    const toggle = document.getElementById('darkToggle');
+    toggle.addEventListener('change', () => {
+        document.body.classList.toggle('dark-mode');
+    });
+
+    // Show loader on form submission
+    const form = document.getElementById('uploadForm');
+    form.addEventListener('submit', () => {
+        document.getElementById('loader').classList.remove('d-none');
+    });
+
+    // Image Preview
+    const imageInput = document.getElementById('imageInput');
+    const imagePreview = document.getElementById('imagePreview');
+
+    imageInput.addEventListener('change', function () {
+        const file = this.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                imagePreview.src = e.target.result;
+                imagePreview.classList.remove('d-none');
+            };
+            reader.readAsDataURL(file);
+        } else {
+            imagePreview.classList.add('d-none');
+        }
+    });
+</script>
+
+</body>
+</html>
