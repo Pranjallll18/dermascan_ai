@@ -2,103 +2,760 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DermaScan AI</title>
+    <title>DermaScan AI - Camera Fix</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    
-    <!-- Bootstrap & Animation Libraries -->
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap & Animate.css -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-light: #4895ef;
+            --secondary: #3f37c9;
+            --success: #4cc9f0;
+            --dark: #14213d;
+            --light: #f8f9fa;
+            --gradient-start: #4361ee;
+            --gradient-end: #3f37c9;
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --feature-bg: rgba(255, 255, 255, 0.95);
+            --text-dark: #212529;
+            --text-light: #f8f9fa;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
 
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="static/style/style.css">
+        body.dark-mode {
+            --primary: #4895ef;
+            --primary-light: #4cc9f0;
+            --secondary: #560bad;
+            --dark: #0c0d13;
+            --light: #121212;
+            --gradient-start: #560bad;
+            --gradient-end: #3a0ca3;
+            --card-bg: rgba(30, 30, 40, 0.9);
+            --feature-bg: rgba(35, 35, 45, 0.95);
+            --text-dark: #f8f9fa;
+            --text-light: #f8f9fa;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            color: var(--text-dark);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://images.unsplash.com/photo-1579546929662-711aa81148cf?ixlib=rb-4.0.3&auto=format&fit=crop&w=1950&q=80') center/cover no-repeat;
+            opacity: 0.08;
+            z-index: -1;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .theme-toggle-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            color: var(--primary);
+            border: none;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .theme-toggle-btn:hover {
+            transform: translateY(-3px) rotate(15deg);
+            box-shadow: 0 15px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .hero-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 0;
+            text-align: center;
+        }
+
+        .logo {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .logo i {
+            font-size: 3rem;
+            color: white;
+        }
+
+        .hero-section h1 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, var(--primary-light), white);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .hero-section p {
+            font-size: 1.2rem;
+            max-width: 700px;
+            margin-bottom: 30px;
+            color: var(--text-light);
+            opacity: 0.9;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: none;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+            transition: var(--transition);
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .scan-card {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 30px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .card-title {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            margin-bottom: 25px;
+            color: var(--primary);
+            text-align: center;
+            font-size: 2rem;
+        }
+
+        .btn-gradient {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-gradient:hover {
+            background: linear-gradient(to right, var(--secondary), var(--primary));
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        .feature-box {
+            background: var(--feature-bg);
+            border-radius: 15px;
+            padding: 25px;
+            height: 100%;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--primary), var(--success));
+            transition: var(--transition);
+        }
+
+        .feature-box:hover::before {
+            width: 100%;
+            opacity: 0.1;
+        }
+
+        .feature-box:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            color: white;
+            font-size: 1.5rem;
+            box-shadow: 0 5px 15px rgba(67, 97, 238, 0.3);
+        }
+
+        .feature-box h5 {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+
+        .feature-box ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .feature-box li {
+            margin-bottom: 10px;
+            padding-left: 25px;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .feature-box li:hover {
+            color: var(--primary);
+        }
+
+        .feature-box li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        #cameraContainer {
+            position: relative;
+            margin: 20px 0;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        #video {
+            width: 100%;
+            border-radius: 15px;
+            display: none;
+        }
+
+        .camera-placeholder {
+            height: 300px;
+            background: linear-gradient(135deg, #e0e7ff, #dbeafe);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-size: 5rem;
+        }
+
+        .dark-mode .camera-placeholder {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+        }
+
+        .capture-btn {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: white;
+            border: 4px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transition: var(--transition);
+            z-index: 10;
+        }
+
+        .capture-btn::before {
+            content: '';
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+        }
+
+        .capture-btn:hover {
+            transform: translateX(-50%) scale(1.1);
+        }
+
+        #imagePreview {
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            max-height: 300px;
+            object-fit: cover;
+            border: 3px solid var(--primary);
+            display: none;
+        }
+
+        .scanner-circle {
+            width: 60px;
+            height: 60px;
+            border: 6px solid var(--primary);
+            border-top: 6px solid transparent;
+            border-radius: 50%;
+            animation: spin 1.2s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .section-title {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 800;
+            text-align: center;
+            margin: 60px 0 40px;
+            position: relative;
+            color: var(--text-light);
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(to right, var(--primary), var(--success));
+            border-radius: 2px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 40px 0 20px;
+            color: var(--text-light);
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .footer a:hover {
+            color: var(--primary-light);
+            text-decoration: underline;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 60px;
+        }
+
+        .camera-feedback {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            border-radius: 15px;
+            z-index: 20;
+            display: none;
+        }
+
+        .camera-feedback i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .hero-section h1 {
+                font-size: 2.5rem;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .scan-card {
+                padding: 20px;
+            }
+        }
+    </style>
 </head>
 <body>
+    <!-- Dark Mode Toggle -->
+    <div class="theme-toggle">
+        <button class="theme-toggle-btn" id="darkToggle">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
 
-<!-- Dark Mode Toggle -->
-<div class="theme-toggle position-absolute top-0 end-0 p-3">
-    <input type="checkbox" id="darkToggle" class="form-check-input">
-    <label for="darkToggle" class="text-white">🌙 Dark Mode</label>
-</div>
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="logo">
+            <i class="fas fa-dna"></i>
+        </div>
+        <h1>DermaScan AI</h1>
+        <p>Advanced AI-powered skin analysis for early detection and prevention of skin conditions</p>
+    </div>
 
-<!-- Main Container -->
-<div class="container d-flex justify-content-center align-items-center vh-100">
-    <div class="card p-4 shadow-lg animate__animated animate__fadeInUp" id="scanCard">
-        <div class="text-center">
-            <img src="/static/img/logo.jpg" alt="logo" width="100" class="mb-3 animate__animated animate__zoomIn">
-            <h2 class="mb-2 animate__animated animate__fadeInDown">DermaScan <span class="text-primary">AI</span></h2>
-            <p class="mb-4">Upload a dermatoscopic image to detect skin cancer</p>
-
-            <!-- Upload Form -->
+    <!-- Main Scan Card -->
+    <div class="container">
+        <div class="card scan-card animate__animated animate__fadeInUp">
+            <h2 class="card-title">Skin Health Analysis</h2>
+            
             <form id="uploadForm" action="/predict" method="post" enctype="multipart/form-data">
-                <label for="imageInput" class="form-label">Choose or Capture an Image</label>
-
-                <!-- Hidden File Input -->
-                <input type="file" id="imageInput" name="image" accept="image/*" capture="environment" class="form-control d-none" required>
-
-                <!-- Trigger Button -->
-                <button type="button" class="btn btn-outline-primary w-100 mb-3" onclick="document.getElementById('imageInput').click();">
-                    📸 Capture or Select Image
-                </button>
-
-                <!-- Preview Image -->
-                <div class="text-center mb-3">
-                    <img id="imagePreview" src="" alt="Image Preview" class="img-fluid rounded d-none" style="max-height: 300px;">
+                <div class="d-grid gap-3">
+                    <input type="file" id="imageInput" name="image" accept="image/*" capture="environment" class="form-control d-none" required>
+                    
+                    <button type="button" class="btn btn-gradient" onclick="document.getElementById('imageInput').click();">
+                        <i class="fas fa-cloud-upload-alt"></i> Upload Image
+                    </button>
+                    
+                    <button type="button" class="btn btn-outline" onclick="startCamera();">
+                        <i class="fas fa-camera"></i> Use Live Camera
+                    </button>
+                    
+                    <div id="cameraContainer" class="d-none">
+                        <div class="camera-feedback" id="cameraFeedback">
+                            <i class="fas fa-check-circle text-success"></i>
+                            <h4>Image Captured Successfully!</h4>
+                        </div>
+                        <div class="camera-placeholder">
+                            <i class="fas fa-camera"></i>
+                            <p class="mt-2">Camera is starting...</p>
+                        </div>
+                        <video id="video" autoplay class="rounded"></video>
+                        <div class="capture-btn" onclick="captureImage();"></div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <img id="imagePreview" src="" alt="Image Preview" class="img-fluid">
+                    </div>
+                    
+                    <canvas id="canvas" class="d-none"></canvas>
+                    <input type="hidden" id="capturedImage" name="capturedImage">
+                    
+                    <button type="submit" class="btn btn-gradient mt-3">
+                        <i class="fas fa-search"></i> Analyze Image
+                    </button>
                 </div>
-
-                <div class="text-muted small mb-3">
-                    📷 On mobile, you can take a photo or choose from the gallery.
-                </div>
-
-                <!-- Submit Button -->
-                <button type="submit" class="btn btn-gradient w-100">🔍 Scan</button>
             </form>
-
-            <!-- Loader -->
-            <div id="loader" class="mt-4 d-none">
+            
+            <div id="loader" class="mt-4 d-none text-center">
                 <div class="scanner">
                     <div class="scanner-circle"></div>
-                    <p class="text-center mt-2">Scanning...</p>
+                    <p class="mt-3">Analyzing your skin image with AI...</p>
                 </div>
             </div>
-
-            <!-- Logout Button -->
-            <a href="/logout" class="btn btn-outline-danger mt-3 w-100">Logout</a>
+            
+            <div class="text-center mt-4">
+                <a href="/logout" class="btn btn-outline">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+        
+        <h2 class="section-title">App Features & Information</h2>
+        
+        <div class="feature-grid">
+            <div class="feature-box animate__animated">
+                <div class="feature-icon">
+                    <i class="fas fa-camera"></i>
+                </div>
+                <h5>Image Capture</h5>
+                <ul>
+                    <li>Upload from gallery or capture live</li>
+                    <li>High-quality image processing</li>
+                    <li>Instant preview functionality</li>
+                </ul>
+            </div>
+            
+            <div class="feature-box animate__animated">
+                <div class="feature-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h5>AI Analysis</h5>
+                <ul>
+                    <li>Deep learning skin analysis</li>
+                    <li>Instant risk assessment</li>
+                    <li>Detailed diagnostic report</li>
+                </ul>
+            </div>
+            
+            <div class="feature-box animate__animated">
+                <div class="feature-icon">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+                <h5>Health Tracking</h5>
+                <ul>
+                    <li>Track changes over time</li>
+                    <li>Personalized health insights</li>
+                    <li>Progress visualization</li>
+                </ul>
+            </div>
+            
+            <div class="feature-box animate__animated">
+                <div class="feature-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h5>Prevention Tips</h5>
+                <ul>
+                    <li>Sun protection strategies</li>
+                    <li>Self-examination guidance</li>
+                    <li>Early detection methods</li>
+                </ul>
+            </div>
+            
+            <div class="feature-box animate__animated">
+                <div class="feature-icon">
+                    <i class="fas fa-book-medical"></i>
+                </div>
+                <h5>Medical Resources</h5>
+                <ul>
+                    <li>Professional medical advice</li>
+                    <li>Find dermatologists near you</li>
+                    <li>Educational materials</li>
+                </ul>
+            </div>
+            
+            <div class="feature-box animate__animated">
+                <div class="feature-icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h5>Privacy & Security</h5>
+                <ul>
+                    <li>HIPAA compliant</li>
+                    <li>End-to-end encryption</li>
+                    <li>Your data stays private</li>
+                </ul>
+            </div>
         </div>
     </div>
-</div>
+    
+    <!-- Footer -->
+    <div class="footer">
+        <p>&copy; 2023 DermaScan AI. All rights reserved.</p>
+        <p>This application is for informational purposes only and does not provide medical advice.</p>
+        <p>Contact: <a href="mailto:support@dermascan.ai">support@dermascan.ai</a> | 
+           <a href="#">Privacy Policy</a> | 
+           <a href="#">Terms of Service</a></p>
+    </div>
 
-<!-- JavaScript -->
-<script>
-    // Dark Mode Toggle
-    const toggle = document.getElementById('darkToggle');
-    toggle.addEventListener('change', () => {
-        document.body.classList.toggle('dark-mode');
-    });
-
-    // Show loader on form submission
-    const form = document.getElementById('uploadForm');
-    form.addEventListener('submit', () => {
-        document.getElementById('loader').classList.remove('d-none');
-    });
-
-    // Image Preview
-    const imageInput = document.getElementById('imageInput');
-    const imagePreview = document.getElementById('imagePreview');
-
-    imageInput.addEventListener('change', function () {
-        const file = this.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                imagePreview.src = e.target.result;
-                imagePreview.classList.remove('d-none');
-            };
-            reader.readAsDataURL(file);
-        } else {
-            imagePreview.classList.add('d-none');
+    <script>
+        // Dark Mode Toggle
+        const darkToggle = document.getElementById('darkToggle');
+        const darkIcon = darkToggle.querySelector('i');
+        
+        // Check for saved theme preference
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+            darkIcon.classList.replace('fa-moon', 'fa-sun');
         }
-    });
-</script>
-
+        
+        darkToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            
+            if (document.body.classList.contains('dark-mode')) {
+                darkIcon.classList.replace('fa-moon', 'fa-sun');
+                localStorage.setItem('darkMode', 'true');
+            } else {
+                darkIcon.classList.replace('fa-sun', 'fa-moon');
+                localStorage.setItem('darkMode', 'false');
+            }
+        });
+        
+        // Loader
+        document.getElementById('uploadForm').addEventListener('submit', () => {
+            document.getElementById('loader').classList.remove('d-none');
+        });
+        
+        // Image Preview
+        const imageInput = document.getElementById('imageInput');
+        const imagePreview = document.getElementById('imagePreview');
+        imageInput.addEventListener('change', function () {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Camera Functionality - FIXED
+        let videoStream = null;
+        function startCamera() {
+            const cameraContainer = document.getElementById('cameraContainer');
+            const video = document.getElementById('video');
+            const placeholder = document.querySelector('.camera-placeholder');
+            const feedback = document.getElementById('cameraFeedback');
+            
+            cameraContainer.classList.remove('d-none');
+            feedback.style.display = 'none';
+            placeholder.style.display = 'flex';
+            video.style.display = 'none';
+            
+            navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: 'environment',
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
+                audio: false 
+            })
+            .then(stream => {
+                videoStream = stream;
+                video.srcObject = stream;
+                placeholder.style.display = 'none';
+                video.style.display = 'block';
+            })
+            .catch(err => {
+                console.error("Camera error:", err);
+                alert("Camera access denied or unavailable.");
+                placeholder.innerHTML = '<i class="fas fa-exclamation-triangle"></i><p class="mt-2">Camera access denied</p>';
+            });
+        }
+        
+        function captureImage() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const preview = document.getElementById('imagePreview');
+            const hiddenInput = document.getElementById('capturedImage');
+            const feedback = document.getElementById('cameraFeedback');
+            const context = canvas.getContext('2d');
+            
+            if (!videoStream) {
+                alert("Please start the camera first");
+                return;
+            }
+            
+            // Show feedback overlay
+            feedback.style.display = 'flex';
+            
+            // Wait a moment to show feedback before capturing
+            setTimeout(() => {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Stop the video stream
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+                
+                // Convert to data URL
+                const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+                preview.src = dataURL;
+                preview.style.display = 'block';
+                hiddenInput.value = dataURL;
+                
+                // Hide camera container after delay
+                setTimeout(() => {
+                    document.getElementById('cameraContainer').classList.add('d-none');
+                    feedback.style.display = 'none';
+                }, 1000);
+                
+            }, 500);
+        }
+        
+        // Animate feature boxes on scroll
+        document.addEventListener('DOMContentLoaded', function() {
+            const featureBoxes = document.querySelectorAll('.feature-box');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animate__fadeInUp');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+            
+            featureBoxes.forEach(box => {
+                observer.observe(box);
+            });
+        });
+    </script>
 </body>
 </html>
