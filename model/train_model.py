@@ -8,10 +8,13 @@ from torchvision import transforms
 from PIL import Image
 import pandas as pd
 import matplotlib.pyplot as plt
+from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.metrics import classification_report, accuracy_score, f1_score, recall_score, precision_score, confusion_matrix, ConfusionMatrixDisplay
-from cnn_ctrnn_model import CNN_CTRNN  # Import your model here
+from focal_loss import FocalLoss
+from cnn_ctrnn_model import CNN_CTRNN  # Your CNN-CTRNN model
+import  numpy as np
 
-# Helper functions to save/load metrics
+# --------- Save/load metrics ---------
 def save_metrics(metrics, filepath="model/metrics.json"):
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     with open(filepath, "w") as f:
@@ -20,132 +23,141 @@ def save_metrics(metrics, filepath="model/metrics.json"):
 
 def load_metrics(filepath="model/metrics.json"):
     if not os.path.exists(filepath):
-        print(f"No metrics file found at {filepath}")
         return None
     with open(filepath, "r") as f:
         metrics = json.load(f)
-    print(f"Metrics loaded from {filepath}")
     return metrics
 
-
+# --------- Dataset ---------
 class HAM10000Dataset(Dataset):
-    def __init__(self, csv_file, img_dir, transform=None):
-        self.data = pd.read_csv(csv_file)
+    def __init__(self, dataframe, img_dir, transform=None, augment_malignant=False):
+        self.data = dataframe
         self.img_dir = img_dir
         self.transform = transform
+        self.augment_malignant = augment_malignant
         self.label_map = {"benign": 0, "malignant": 1}
-        self.data['label'] = self.data['dx'].apply(lambda x: 'malignant' if x in ['mel', 'bcc'] else 'benign')
+        self.augment_transform = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            transforms.RandomRotation(40),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+            transforms.RandomPerspective(distortion_scale=0.2, p=0.5),
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        img_name = os.path.join(self.img_dir, self.data.iloc[idx, 1] + ".jpg")
-        image = Image.open(img_name).convert("RGB")
-        label = self.label_map[self.data.loc[idx, "label"]]
-        if self.transform:
+        row = self.data.iloc[idx]
+        img_path = os.path.join(self.img_dir, row['image_id'] + '.jpg')
+        image = Image.open(img_path).convert("RGB")
+        label_str = row['label']
+        label = self.label_map[label_str]
+
+        if self.augment_malignant and label_str == "malignant":
+            image = self.augment_transform(image)
+        else:
             image = self.transform(image)
-        image = image.unsqueeze(0)  # Add sequence dimension for CTRNN
+
+        image = image.unsqueeze(0)  # Add sequence dimension
         return image, label
 
-
-# Transforms
+# --------- Transforms ---------
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-# Load Dataset
-dataset = HAM10000Dataset(
-    csv_file="../dataset/HAM10000_metadata.csv",
-    img_dir="../dataset/HAM10000_images",
-    transform=transform
-)
+# --------- Load CSV ---------
+csv_path = "../dataset/HAM10000_metadata.csv"
+img_dir = "../dataset/HAM10000_images"
+df = pd.read_csv(csv_path)
+df['label'] = df['dx'].apply(lambda x: 'malignant' if x in ['mel', 'bcc'] else 'benign')
 
-# Calculate class weights
-labels = [dataset[i][1] for i in range(len(dataset))]
-benign_count = labels.count(0)
-malignant_count = labels.count(1)
-total = benign_count + malignant_count
-weights = torch.tensor([total / benign_count, total / malignant_count], dtype=torch.float)
+# --------- Stratified Split ---------
+splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+train_idx, test_idx = next(splitter.split(df, df['label']))
+train_df = df.iloc[train_idx].reset_index(drop=True)
+test_df = df.iloc[test_idx].reset_index(drop=True)
 
-# Train/Test Split
-train_size = int(0.8 * len(dataset))
-test_size = len(dataset) - train_size
-train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+# --------- Manual Oversampling ---------
+malignant_df = train_df[train_df['label'] == 'malignant']
+benign_df = train_df[train_df['label'] == 'benign']
 
-# Data Loaders
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+# Increase malignant samples by duplicating them 3 times
+malignant_oversampled = pd.concat([malignant_df] * 10, ignore_index=True)
 
-# Device setup
+# Combine and shuffle
+train_df = pd.concat([benign_df, malignant_oversampled], ignore_index=True)
+train_df = train_df.sample(frac=1, random_state=42).reset_index(drop=True)
+
+# --------- Class Weights ---------
+class_counts = train_df['label'].value_counts()
+total = class_counts.sum()
+weights = torch.tensor([total / class_counts['benign'], total / class_counts['malignant']], dtype=torch.float)
+
+# --------- Datasets & Loaders ---------
+train_dataset = HAM10000Dataset(train_df, img_dir, transform, augment_malignant=True)
+test_dataset = HAM10000Dataset(test_df, img_dir, transform, augment_malignant=False)
+
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+# --------- Model, Loss, Optimizer ---------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-weights = weights.to(device)
+model = CNN_CTRNN().to(device)
+weights =  torch.tensor([1.0, 4.0])
+criterion = FocalLoss(alpha=weights.to(device), gamma=2.0)
+optimizer = optim.Adam(model.parameters(), lr=1e-5)
 
-# Load previous metrics if exist
+# --------- Load Previous Metrics (Optional) ---------
 saved_metrics = load_metrics()
 if saved_metrics:
-    print("Previous training info:")
-    print(f"Epochs trained: {saved_metrics['epochs']}")
-    print("Loss per epoch:")
-    for i, loss in enumerate(saved_metrics["epoch_losses"], 1):
-        print(f"  Epoch {i}: {loss:.4f}")
-    print("Evaluation metrics:")
-    print(f"  Accuracy: {saved_metrics['accuracy']:.4f}")
-    print(f"  F1 Score: {saved_metrics['f1_score']:.4f}")
-    print(f"  Recall: {saved_metrics['recall']:.4f}")
-    print(f"  Precision: {saved_metrics['precision']:.4f}")
-    print("------------------------------------------------")
+    print("Previous Training:")
+    print(saved_metrics)
 
-# Model, loss, optimizer
-model = CNN_CTRNN()
-model.to(device)
-criterion = nn.CrossEntropyLoss(weight=weights)
-optimizer = optim.Adam(model.parameters(), lr=1e-4)
-
-# Training loop
-EPOCHS = 20
+# --------- Training ---------
+EPOCHS = 10
 epoch_losses = []
 
 for epoch in range(EPOCHS):
     model.train()
     running_loss = 0.0
     for inputs, labels in train_loader:
-        inputs = inputs.to(device)
-        labels = labels.to(device)
+        inputs, labels = inputs.to(device), labels.to(device)
 
         optimizer.zero_grad()
         outputs = model(inputs)
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
-
         running_loss += loss.item()
 
     avg_loss = running_loss / len(train_loader)
     epoch_losses.append(avg_loss)
-    print(f"Epoch {epoch+1}, Loss: {avg_loss:.4f}")
+    print(f"Epoch {epoch+1}/{EPOCHS}, Loss: {avg_loss:.4f}")
 
-# Save model
+# --------- Save Model ---------
 os.makedirs("model", exist_ok=True)
 torch.save(model.state_dict(), "model/skin_cancer_model.pth")
 
-# Evaluation
+# --------- Evaluation ---------
 model.eval()
-all_preds = []
-all_labels = []
+all_preds, all_labels = [], []
 
 with torch.no_grad():
     for inputs, labels in test_loader:
-        inputs = inputs.to(device)
-        labels = labels.to(device)
+        inputs, labels = inputs.to(device), labels.to(device)
         outputs = model(inputs)
         _, preds = torch.max(outputs, 1)
         all_preds.extend(preds.cpu().numpy())
         all_labels.extend(labels.cpu().numpy())
 
-# Metrics
+# --------- Metrics ---------
 print("Classification Report:")
 print(classification_report(all_labels, all_preds, target_names=["Benign", "Malignant"]))
 
@@ -154,9 +166,6 @@ f1 = f1_score(all_labels, all_preds)
 recall = recall_score(all_labels, all_preds)
 precision = precision_score(all_labels, all_preds)
 
-print(f"Accuracy: {acc:.4f}, F1 Score: {f1:.4f}, Recall: {recall:.4f}, Precision: {precision:.4f}")
-
-# Save all info
 metrics = {
     "epochs": EPOCHS,
     "epoch_losses": epoch_losses,
@@ -165,28 +174,26 @@ metrics = {
     "recall": recall,
     "precision": precision
 }
-
 save_metrics(metrics)
 
-# Plot performance graph
+# --------- Plot Metrics ---------
 os.makedirs("static", exist_ok=True)
 plt.figure(figsize=(8, 5))
-metrics_vals = [acc, f1, recall, precision]
-labels = ["Accuracy", "F1 Score", "Recall", "Precision"]
-plt.bar(labels, metrics_vals, color="skyblue")
+plt.bar(["Accuracy", "F1 Score", "Recall", "Precision"], [acc, f1, recall, precision], color="skyblue")
 plt.ylim(0, 1)
-plt.title("Model Performance Metrics")
+plt.title("Model Performance")
 plt.savefig("static/performance_graph.png")
 plt.show()
 
-# Confusion Matrix
+# --------- Confusion Matrix ---------
 cm = confusion_matrix(all_labels, all_preds)
-
 fig, ax = plt.subplots(figsize=(6, 6))
 disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Benign", "Malignant"])
 disp.plot(ax=ax, cmap='Blues')
 plt.title("Confusion Matrix")
 plt.savefig("static/confusion_matrix.png")
 plt.show()
-plt.close(fig)  # Close figure explicitly to free memory
+plt.close(fig)
 
+unique, counts = np.unique(all_preds, return_counts=True)
+print(dict(zip(unique, counts)))
