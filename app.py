@@ -6,6 +6,9 @@ import cv2
 from torchvision import transforms
 from auth import login_required, USERS
 from model.cnn_ctrnn_model import CNN_CTRNN
+from io import BytesIO
+from PIL import Image
+import base64
 
 app = Flask(__name__)
 app.secret_key = 'secret123'
@@ -19,7 +22,6 @@ model.eval()
 
 # Image preprocessing
 transform = transforms.Compose([
-    transforms.ToPILImage(),
     transforms.Resize((224, 224)),
     transforms.ToTensor()
 ])
@@ -48,14 +50,35 @@ def logout():
 @app.route('/predict', methods=['POST'])
 @login_required
 def predict():
-    file = request.files['image']
-    npimg = np.frombuffer(file.read(), np.uint8)
-    img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = transform(img).unsqueeze(0).unsqueeze(0).to(device)  # [batch, seq_len, C, H, W]
+    img = None
+
+    # Check if base64 image from camera is present
+    base64_image = request.form.get('capturedImage')
+    if base64_image:
+        try:
+            header, encoded = base64_image.split(',', 1)
+            decoded = base64.b64decode(encoded)
+            img = Image.open(BytesIO(decoded)).convert('RGB')
+        except Exception as e:
+            print("Error decoding base64 image:", e)
+            return render_template('result.html', label="Invalid image data", confidence=0)
+
+    # Else check if file upload (gallery)
+    elif 'image' in request.files:
+        file = request.files['image']
+        if file.filename != '':
+            npimg = np.frombuffer(file.read(), np.uint8)
+            img_np = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
+            img = Image.fromarray(cv2.cvtColor(img_np, cv2.COLOR_BGR2RGB))
+
+    if img is None:
+        return render_template('result.html', label="No image received", confidence=0)
+
+    # Preprocess and predict
+    img_tensor = transform(img).unsqueeze(0).unsqueeze(0).to(device)  # [batch, seq_len, C, H, W]
 
     with torch.no_grad():
-        output = model(img)
+        output = model(img_tensor)
         probs = F.softmax(output, dim=1)
         pred = torch.argmax(probs, dim=1).item()
         confidence = probs[0][pred].item()
@@ -64,4 +87,4 @@ def predict():
     return render_template('result.html', label=label, confidence=round(confidence * 100, 2))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
