@@ -102,6 +102,11 @@
         }
         
         .benign {
+            background-color: rgba(13, 110, 253, 0.15);
+            color: var(--primary-color);
+        }
+        
+        .normal {
             background-color: rgba(25, 135, 84, 0.15);
             color: var(--success-color);
         }
@@ -115,12 +120,10 @@
             justify-content: center;
             margin: 20px auto;
             position: relative;
-            /* background is set inline in HTML */
             box-shadow: 0 8px 24px rgba(13, 110, 253, 0.25);
         }
         
         body.dark-mode .progress-circle {
-            /* background is set inline in HTML */
             box-shadow: 0 8px 24px rgba(13, 110, 253, 0.15);
         }
         
@@ -288,13 +291,13 @@
             </div>
         {% endif %}
         
-        <div class="result-label {{ 'malignant' if label == 'Malignant' else 'benign' }}">
+        <div class="result-label {{ 'malignant' if label == 'Malignant' else 'normal' if label == 'Normal' else 'benign' }}">
             <i class="fas fa-{{ 'exclamation-triangle' if label == 'Malignant' else 'check-circle' }} me-2"></i>
             {{ label }}
         </div>
         
         <div class="confidence-label">AI Confidence Level</div>
-        <div class="progress-circle" style="background: conic-gradient(var(--primary-color) 0%, var(--primary-color) {{ confidence }}%, {% if label == 'Malignant' %}#e2e8f0{% else %}#e2e8f0{% endif %} {{ confidence }}%, {% if label == 'Malignant' %}#e2e8f0{% else %}#e2e8f0{% endif %} 100%);">
+        <div class="progress-circle" style="background: conic-gradient(var(--primary-color) 0%, var(--primary-color) {{ confidence }}%, #e2e8f0 {{ confidence }}%, #e2e8f0 100%);">
             <span>{{ confidence }}%</span>
         </div>
         
@@ -306,6 +309,10 @@
                     <li>Monitor the lesion for any changes in size, shape or color</li>
                     <li>Avoid direct sunlight on the affected area</li>
                     <li>Do not attempt to remove or treat the lesion yourself</li>
+                {% elif label == 'Normal' %}
+                    <li>Continue regular skin self-examinations</li>
+                    <li>Use sunscreen with SPF 30+ when exposed to sunlight</li>
+                    <li>No immediate medical consultation required</li>
                 {% else %}
                     <li>Schedule a routine check with your dermatologist</li>
                     <li>Continue to monitor the lesion for any changes</li>
@@ -333,7 +340,6 @@
             const themeLabel = toggle.nextElementSibling.querySelector('span');
             const themeIcon = toggle.nextElementSibling.querySelector('.fa-moon');
             
-            // Load saved theme preference
             if (localStorage.getItem('darkMode') === 'true') {
                 document.body.classList.add('dark-mode');
                 toggle.checked = true;
@@ -341,7 +347,6 @@
                 themeIcon.classList.replace('fa-moon', 'fa-sun');
             }
             
-            // Toggle theme
             toggle.addEventListener('change', function() {
                 document.body.classList.toggle('dark-mode');
                 const isDark = document.body.classList.contains('dark-mode');
