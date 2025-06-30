@@ -9,6 +9,8 @@ from model.cnn_ctrnn_model import CNN_CTRNN
 from io import BytesIO
 from PIL import Image
 import base64
+import os
+import uuid
 
 app = Flask(__name__)
 app.secret_key = 'secret123'
@@ -25,6 +27,11 @@ transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor()
 ])
+
+# Define upload folder
+UPLOAD_FOLDER = 'static/uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
 @app.route('/')
 @login_required
@@ -52,7 +59,7 @@ def logout():
 def predict():
     img = None
 
-    # Check if base64 image from camera is present
+    # Check if base64 zdecydowanie image from camera is present
     base64_image = request.form.get('capturedImage')
     if base64_image:
         try:
@@ -74,9 +81,15 @@ def predict():
     if img is None:
         return render_template('result.html', label="No image received", confidence=0)
 
+    # Save the image to static/uploads with a unique filename
+    unique_id = str(uuid.uuid4())
+    filename = f"{unique_id}.jpg"
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    img.save(filepath)
+    image_url = url_for('static', filename=f'uploads/{filename}')
+
     # Preprocess and predict
     img_tensor = transform(img).unsqueeze(0).unsqueeze(0).to(device)  # [batch, seq_len, C, H, W]
-
     with torch.no_grad():
         output = model(img_tensor)
         probs = F.softmax(output, dim=1)
@@ -84,7 +97,7 @@ def predict():
         confidence = probs[0][pred].item()
 
     label = "Malignant" if pred == 1 else "Benign"
-    return render_template('result.html', label=label, confidence=round(confidence * 100, 2))
+    return render_template('result.html', label=label, confidence=round(confidence * 100, 2), image_data=image_url)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
