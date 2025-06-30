@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <title>DermaScan AI - Camera Fix</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
-    <!-- Bootstrap & Animate.css -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
@@ -445,7 +442,6 @@
             margin-bottom: 15px;
         }
 
-        /* Responsive adjustments */
         @media (max-width: 768px) {
             .hero-section h1 {
                 font-size: 2.5rem;
@@ -462,14 +458,12 @@
     </style>
 </head>
 <body>
-    <!-- Dark Mode Toggle -->
     <div class="theme-toggle">
         <button class="theme-toggle-btn" id="darkToggle">
             <i class="fas fa-moon"></i>
         </button>
     </div>
 
-    <!-- Hero Section -->
     <div class="hero-section">
         <div class="logo">
             <i class="fas fa-dna"></i>
@@ -478,20 +472,19 @@
         <p>Advanced AI-powered skin analysis for early detection and prevention of skin conditions</p>
     </div>
 
-    <!-- Main Scan Card -->
     <div class="container">
         <div class="card scan-card animate__animated animate__fadeInUp">
             <h2 class="card-title">Skin Health Analysis</h2>
             
             <form id="uploadForm" action="/predict" method="post" enctype="multipart/form-data">
                 <div class="d-grid gap-3">
-                    <input type="file" id="imageInput" name="image" accept="image/*" capture="environment" class="form-control d-none" required>
+                    <input type="file" id="imageInput" name="image" accept="image/*" class="form-control d-none">
                     
                     <button type="button" class="btn btn-gradient" onclick="document.getElementById('imageInput').click();">
                         <i class="fas fa-cloud-upload-alt"></i> Upload Image
                     </button>
                     
-                    <button type="button" class="btn btn-outline" onclick="startCamera();">
+                    <button type="button" class="btn btn-outline" id="startCameraBtn">
                         <i class="fas fa-camera"></i> Use Live Camera
                     </button>
                     
@@ -505,7 +498,7 @@
                             <p class="mt-2">Camera is starting...</p>
                         </div>
                         <video id="video" autoplay class="rounded"></video>
-                        <div class="capture-btn" onclick="captureImage();"></div>
+                        <div class="capture-btn" id="captureBtn"></div>
                     </div>
                     
                     <div class="text-center">
@@ -515,7 +508,7 @@
                     <canvas id="canvas" class="d-none"></canvas>
                     <input type="hidden" id="capturedImage" name="capturedImage">
                     
-                    <button type="submit" class="btn btn-gradient mt-3">
+                    <button type="submit" class="btn btn-gradient mt-3" id="analyzeBtn" disabled>
                         <i class="fas fa-search"></i> Analyze Image
                     </button>
                 </div>
@@ -612,9 +605,8 @@
         </div>
     </div>
     
-    <!-- Footer -->
     <div class="footer">
-        <p>&copy; 2023 DermaScan AI. All rights reserved.</p>
+        <p>© 2025 DermaScan AI. All rights reserved.</p>
         <p>This application is for informational purposes only and does not provide medical advice.</p>
         <p>Contact: <a href="mailto:support@dermascan.ai">support@dermascan.ai</a> | 
            <a href="#">Privacy Policy</a> | 
@@ -622,11 +614,9 @@
     </div>
 
     <script>
-        // Dark Mode Toggle
         const darkToggle = document.getElementById('darkToggle');
         const darkIcon = darkToggle.querySelector('i');
         
-        // Check for saved theme preference
         if (localStorage.getItem('darkMode') === 'true') {
             document.body.classList.add('dark-mode');
             darkIcon.classList.replace('fa-moon', 'fa-sun');
@@ -644,14 +634,13 @@
             }
         });
         
-        // Loader
         document.getElementById('uploadForm').addEventListener('submit', () => {
             document.getElementById('loader').classList.remove('d-none');
         });
         
-        // Image Preview
         const imageInput = document.getElementById('imageInput');
         const imagePreview = document.getElementById('imagePreview');
+        const analyzeBtn = document.getElementById('analyzeBtn');
         imageInput.addEventListener('change', function () {
             const file = this.files[0];
             if (file) {
@@ -659,12 +648,13 @@
                 reader.onload = function (e) {
                     imagePreview.src = e.target.result;
                     imagePreview.style.display = 'block';
+                    document.getElementById('capturedImage').value = '';
+                    analyzeBtn.disabled = false;
                 };
                 reader.readAsDataURL(file);
             }
         });
         
-        // Camera Functionality - FIXED
         let videoStream = null;
         function startCamera() {
             const cameraContainer = document.getElementById('cameraContainer');
@@ -705,41 +695,44 @@
             const hiddenInput = document.getElementById('capturedImage');
             const feedback = document.getElementById('cameraFeedback');
             const context = canvas.getContext('2d');
+            const uploadForm = document.getElementById('uploadForm');
             
             if (!videoStream) {
                 alert("Please start the camera first");
                 return;
             }
             
-            // Show feedback overlay
             feedback.style.display = 'flex';
             
-            // Wait a moment to show feedback before capturing
             setTimeout(() => {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
-                // Stop the video stream
                 videoStream.getTracks().forEach(track => track.stop());
                 videoStream = null;
                 
-                // Convert to data URL
                 const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+                console.log('Captured Image:', dataURL.substring(0, 50));
                 preview.src = dataURL;
                 preview.style.display = 'block';
                 hiddenInput.value = dataURL;
                 
-                // Hide camera container after delay
+                document.getElementById('imageInput').value = '';
+                
                 setTimeout(() => {
                     document.getElementById('cameraContainer').classList.add('d-none');
                     feedback.style.display = 'none';
+                    analyzeBtn.disabled = false;
+                    uploadForm.submit();
                 }, 1000);
                 
             }, 500);
         }
         
-        // Animate feature boxes on scroll
+        document.getElementById('startCameraBtn').addEventListener('click', startCamera);
+        document.getElementById('captureBtn').addEventListener('click', captureImage);
+        
         document.addEventListener('DOMContentLoaded', function() {
             const featureBoxes = document.querySelectorAll('.feature-box');
             
