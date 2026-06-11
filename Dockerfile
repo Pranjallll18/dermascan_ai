@@ -1,9 +1,9 @@
-# Use a lightweight Python base image
-FROM python:3.11-slim
+# Pin the exact base image digest to prevent OS-level breakage
+FROM python:3.11-slim@sha256:f9fa7f851e38bfb19c9de3afbc4b86ae7176ea7aaf94535c31df5458d5849457
 
-# Install system dependencies for OpenCV and other packages
+# Install system dependencies for OpenCV
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -13,11 +13,11 @@ WORKDIR /app
 # Copy requirements and install dependencies
 COPY requirements.txt .
 
-# Install CPU-only PyTorch first to keep container size under 1.5GB
-RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+# Install CPU-only PyTorch (pinned version) first to keep container size under 1.5GB
+RUN pip install --no-cache-dir torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu
 
-# Install remaining dependencies and gunicorn for production serving
-RUN pip install --no-cache-dir -r requirements.txt gunicorn
+# Install remaining pinned dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code
 COPY . .
