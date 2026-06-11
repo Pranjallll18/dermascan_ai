@@ -2,103 +2,399 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DermaScan AI</title>
+    <title>DermaScan AI — Skin Health Analysis</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    
-    <!-- Bootstrap & Animation Libraries -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <meta name="description" content="Upload or capture a skin lesion image for instant AI-powered analysis across 7 diagnostic categories.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style/style.css">
+    <style>
+        /* Hero */
+        .hero { text-align: center; padding: 60px 0 40px; }
+        .hero-eyebrow {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 6px 16px;
+            border-radius: var(--radius-full);
+            background: rgba(194,59,82,0.08);
+            border: 1px solid var(--border-subtle);
+            font-size: 0.78rem; font-weight: 600; color: var(--crimson-light);
+            text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+        .hero h1 { font-size: 3.2rem; font-weight: 900; margin-bottom: 14px; line-height: 1.1; }
+        .hero p { font-size: 1.1rem; color: var(--text-muted); max-width: 560px; margin: 0 auto; }
 
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="static/style/style.css">
+        /* Scan Card */
+        .scan-section { max-width: 620px; margin: 0 auto 50px; }
+        .scan-card { padding: 36px; }
+        .scan-title {
+            font-size: 1.2rem; font-weight: 700;
+            margin-bottom: 24px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .scan-title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--crimson); animation: pulse 2s infinite; }
+
+        .btn-row { display: flex; gap: 12px; margin-bottom: 20px; }
+        .btn-row .btn { flex: 1; }
+
+        /* Camera */
+        #cameraWrap {
+            position: relative;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            background: var(--bg-input);
+            margin-bottom: 20px;
+        }
+        #cameraWrap video { width: 100%; display: block; border-radius: var(--radius-md); }
+        .cam-placeholder {
+            height: 260px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: var(--text-dim);
+            gap: 10px;
+        }
+        .cam-placeholder i { font-size: 2.5rem; color: var(--crimson-dark); }
+
+        .capture-ring {
+            position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+            width: 58px; height: 58px; border-radius: 50%;
+            background: white; border: 4px solid var(--crimson);
+            cursor: pointer; z-index: 10;
+            display: flex; align-items: center; justify-content: center;
+            transition: var(--transition-bounce);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .capture-ring::before {
+            content: ''; width: 38px; height: 38px;
+            border-radius: 50%; background: var(--crimson);
+            transition: var(--transition);
+        }
+        .capture-ring:hover { transform: translateX(-50%) scale(1.1); }
+        .capture-ring:hover::before { background: var(--crimson-dark); }
+
+        /* Preview */
+        #previewWrap { text-align: center; margin-bottom: 20px; }
+        #previewWrap img {
+            max-height: 280px; border-radius: var(--radius-md);
+            border: 2px solid var(--border-medium);
+            box-shadow: var(--glow-sm);
+        }
+
+        /* Loader */
+        .scan-loader { text-align: center; padding: 30px 0; }
+        .scan-loader p { margin-top: 14px; color: var(--text-muted); font-size: 0.9rem; }
+
+        /* Section heading */
+        .section-head {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+        .section-head h2 { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; }
+        .section-head p { color: var(--text-muted); font-size: 0.95rem; }
+        .section-head .line {
+            width: 60px; height: 3px; margin: 14px auto 0;
+            border-radius: 2px;
+            background: linear-gradient(90deg, var(--crimson), var(--rose));
+        }
+
+        /* Stats row */
+        .stats-row {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 60px;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.2rem; }
+            .btn-row { flex-direction: column; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 480px) {
+            .hero { padding: 40px 0 24px; }
+            .hero h1 { font-size: 1.8rem; }
+            .scan-card { padding: 24px; }
+        }
+    </style>
 </head>
 <body>
+    <div class="bg-mesh">
+        <div class="blob3"></div>
+        <div class="grid-overlay"></div>
+    </div>
 
-<!-- Dark Mode Toggle -->
-<div class="theme-toggle position-absolute top-0 end-0 p-3">
-    <input type="checkbox" id="darkToggle" class="form-check-input">
-    <label for="darkToggle" class="text-white">🌙 Dark Mode</label>
-</div>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="navbar-brand">
+                <span class="logo-icon"><i class="fas fa-microscope"></i></span>
+                DermaScan <span class="text-gradient">AI</span>
+            </a>
+            <div class="navbar-right">
+                <span class="navbar-user hide-mobile">
+                    <i class="fas fa-circle-user"></i>
+                    {{ session.get('user_email', 'User') }}
+                </span>
+                <a href="/logout" class="btn btn-ghost btn-sm">
+                    <i class="fas fa-right-from-bracket"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
 
-<!-- Main Container -->
-<div class="container d-flex justify-content-center align-items-center vh-100">
-    <div class="card p-4 shadow-lg animate__animated animate__fadeInUp" id="scanCard">
-        <div class="text-center">
-            <img src="/static/img/logo.jpg" alt="logo" width="100" class="mb-3 animate__animated animate__zoomIn">
-            <h2 class="mb-2 animate__animated animate__fadeInDown">DermaScan <span class="text-primary">AI</span></h2>
-            <p class="mb-4">Upload a dermatoscopic image to detect skin cancer</p>
+    <div class="container">
+        <!-- Hero -->
+        <section class="hero anim-fade-up">
+            <div class="hero-eyebrow">
+                <span class="pulse-dot"></span> AI-Powered Analysis
+            </div>
+            <h1><span class="text-gradient">Intelligent Skin</span><br>Health Scanner</h1>
+            <p>Upload or capture a skin lesion image for instant analysis across 7 diagnostic categories using deep learning.</p>
+        </section>
 
-            <!-- Upload Form -->
-            <form id="uploadForm" action="/predict" method="post" enctype="multipart/form-data">
-                <label for="imageInput" class="form-label">Choose or Capture an Image</label>
-
-                <!-- Hidden File Input -->
-                <input type="file" id="imageInput" name="image" accept="image/*" capture="environment" class="form-control d-none" required>
-
-                <!-- Trigger Button -->
-                <button type="button" class="btn btn-outline-primary w-100 mb-3" onclick="document.getElementById('imageInput').click();">
-                    📸 Capture or Select Image
-                </button>
-
-                <!-- Preview Image -->
-                <div class="text-center mb-3">
-                    <img id="imagePreview" src="" alt="Image Preview" class="img-fluid rounded d-none" style="max-height: 300px;">
+        <!-- Scan Card -->
+        <section class="scan-section anim-fade-up-d1">
+            <div class="glass scan-card">
+                <div class="scan-title">
+                    <span class="dot"></span> Start Analysis
                 </div>
 
-                <div class="text-muted small mb-3">
-                    📷 On mobile, you can take a photo or choose from the gallery.
-                </div>
+                <form id="uploadForm" action="/predict" method="post" enctype="multipart/form-data">
+                    <input type="file" id="fileInput" name="image" accept="image/*" class="hidden">
+                    <canvas id="canvas" class="hidden"></canvas>
+                    <input type="hidden" id="capturedImage" name="capturedImage">
 
-                <!-- Submit Button -->
-                <button type="submit" class="btn btn-gradient w-100">🔍 Scan</button>
-            </form>
+                    <!-- Upload zone -->
+                    <div class="upload-zone mb-20" id="dropZone" role="button" tabindex="0" aria-label="Upload image">
+                        <div class="upload-icon"><i class="fas fa-cloud-arrow-up"></i></div>
+                        <p style="color:var(--text-light); font-weight:600; margin-bottom:4px;">Drag & drop an image here</p>
+                        <p class="text-dim" style="font-size:0.82rem;">or click to browse · JPEG, PNG</p>
+                    </div>
 
-            <!-- Loader -->
-            <div id="loader" class="mt-4 d-none">
-                <div class="scanner">
-                    <div class="scanner-circle"></div>
-                    <p class="text-center mt-2">Scanning...</p>
+                    <!-- Buttons -->
+                    <div class="btn-row">
+                        <button type="button" class="btn btn-outline" id="galleryBtn">
+                            <i class="fas fa-images"></i> Gallery
+                        </button>
+                        <button type="button" class="btn btn-outline" id="cameraBtn">
+                            <i class="fas fa-camera"></i> Camera
+                        </button>
+                    </div>
+
+                    <!-- Camera -->
+                    <div id="cameraWrap" class="hidden">
+                        <div class="cam-placeholder" id="camPlaceholder">
+                            <i class="fas fa-camera-retro"></i>
+                            <span>Starting camera…</span>
+                        </div>
+                        <video id="video" autoplay playsinline></video>
+                        <div class="capture-ring" id="captureBtn" title="Capture photo"></div>
+                    </div>
+
+                    <!-- Preview -->
+                    <div id="previewWrap" class="hidden">
+                        <img id="previewImg" src="" alt="Image preview">
+                    </div>
+
+                    <!-- Submit -->
+                    <button type="submit" class="btn btn-primary btn-block btn-lg" id="analyzeBtn">
+                        <i class="fas fa-magnifying-glass-chart"></i>
+                        <span>Analyze Image</span>
+                    </button>
+                </form>
+
+                <!-- Loader -->
+                <div id="loader" class="scan-loader hidden">
+                    <div class="spinner"></div>
+                    <p>Analyzing lesion across 7 categories…</p>
                 </div>
             </div>
+        </section>
 
-            <!-- Logout Button -->
-            <a href="/logout" class="btn btn-outline-danger mt-3 w-100">Logout</a>
-        </div>
+        <!-- Stats -->
+        <section class="stats-row anim-fade-up-d2">
+            <div class="glass-sm stat-card">
+                <div class="stat-value">7</div>
+                <div class="stat-label">Conditions</div>
+            </div>
+            <div class="glass-sm stat-card">
+                <div class="stat-value">10K+</div>
+                <div class="stat-label">Training Images</div>
+            </div>
+            <div class="glass-sm stat-card">
+                <div class="stat-value">4-View</div>
+                <div class="stat-label">Multi-Angle AI</div>
+            </div>
+            <div class="glass-sm stat-card">
+                <div class="stat-value">&lt;3s</div>
+                <div class="stat-label">Analysis Time</div>
+            </div>
+        </section>
+
+        <!-- Features -->
+        <section class="anim-fade-up-d3">
+            <div class="section-head">
+                <h2>How It <span class="text-gradient">Works</span></h2>
+                <p>Advanced deep learning pipeline for dermatological screening</p>
+                <div class="line"></div>
+            </div>
+
+            <div class="grid grid-3 mb-40">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-camera"></i></div>
+                    <h4>Capture</h4>
+                    <ul>
+                        <li>Upload from gallery or use live camera</li>
+                        <li>Supports JPEG and PNG formats</li>
+                        <li>Instant drag-and-drop upload</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-brain"></i></div>
+                    <h4>Multi-View AI</h4>
+                    <ul>
+                        <li>CNN + CTRNN neural network</li>
+                        <li>4 augmented views per image</li>
+                        <li>ResNet-18 feature extraction</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-chart-bar"></i></div>
+                    <h4>7-Class Diagnosis</h4>
+                    <ul>
+                        <li>Melanoma & Basal Cell Carcinoma</li>
+                        <li>Actinic Keratosis & Benign Keratosis</li>
+                        <li>Dermatofibroma, Nevus, Vascular</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-gauge-high"></i></div>
+                    <h4>Confidence Scoring</h4>
+                    <ul>
+                        <li>Per-class probability breakdown</li>
+                        <li>Risk level assessment</li>
+                        <li>Visual confidence gauge</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-stethoscope"></i></div>
+                    <h4>Clinical Guidance</h4>
+                    <ul>
+                        <li>Risk-appropriate recommendations</li>
+                        <li>Condition descriptions</li>
+                        <li>When to seek professional help</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-lock"></i></div>
+                    <h4>Privacy First</h4>
+                    <ul>
+                        <li>Images never stored on server</li>
+                        <li>Real-time analysis only</li>
+                        <li>No data shared with third parties</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
     </div>
-</div>
 
-<!-- JavaScript -->
-<script>
-    // Dark Mode Toggle
-    const toggle = document.getElementById('darkToggle');
-    toggle.addEventListener('change', () => {
-        document.body.classList.toggle('dark-mode');
-    });
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 DermaScan AI · AI-powered dermatological screening</p>
+            <p>This application is for informational purposes only and does not provide medical advice.</p>
+        </div>
+    </footer>
 
-    // Show loader on form submission
-    const form = document.getElementById('uploadForm');
-    form.addEventListener('submit', () => {
-        document.getElementById('loader').classList.remove('d-none');
-    });
+    <script>
+    (function() {
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+        const previewWrap = document.getElementById('previewWrap');
+        const previewImg = document.getElementById('previewImg');
+        const cameraWrap = document.getElementById('cameraWrap');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const capturedInput = document.getElementById('capturedImage');
+        const form = document.getElementById('uploadForm');
+        const loader = document.getElementById('loader');
+        let stream = null;
 
-    // Image Preview
-    const imageInput = document.getElementById('imageInput');
-    const imagePreview = document.getElementById('imagePreview');
+        /* Gallery */
+        document.getElementById('galleryBtn').addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('keydown', e => { if (e.key === 'Enter') fileInput.click(); });
 
-    imageInput.addEventListener('change', function () {
-        const file = this.files[0];
-        if (file) {
+        /* Drag & Drop */
+        ['dragenter','dragover'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('dragover'); }));
+        ['dragleave','drop'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('dragover'); }));
+        dropZone.addEventListener('drop', e => {
+            const files = e.dataTransfer.files;
+            if (files.length) { fileInput.files = files; showPreview(files[0]); }
+        });
+
+        fileInput.addEventListener('change', function() {
+            if (this.files[0]) showPreview(this.files[0]);
+        });
+
+        function showPreview(file) {
             const reader = new FileReader();
-            reader.onload = function (e) {
-                imagePreview.src = e.target.result;
-                imagePreview.classList.remove('d-none');
+            reader.onload = e => {
+                previewImg.src = e.target.result;
+                previewWrap.classList.remove('hidden');
+                cameraWrap.classList.add('hidden');
+                stopCamera();
             };
             reader.readAsDataURL(file);
-        } else {
-            imagePreview.classList.add('d-none');
         }
-    });
-</script>
 
+        /* Camera */
+        document.getElementById('cameraBtn').addEventListener('click', startCamera);
+
+        function startCamera() {
+            cameraWrap.classList.remove('hidden');
+            previewWrap.classList.add('hidden');
+            document.getElementById('camPlaceholder').style.display = 'flex';
+            video.style.display = 'none';
+
+            navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+                audio: false
+            })
+            .then(s => {
+                stream = s;
+                video.srcObject = s;
+                document.getElementById('camPlaceholder').style.display = 'none';
+                video.style.display = 'block';
+            })
+            .catch(() => {
+                document.getElementById('camPlaceholder').innerHTML =
+                    '<i class="fas fa-triangle-exclamation" style="color:var(--danger)"></i><span>Camera access denied</span>';
+            });
+        }
+
+        function stopCamera() {
+            if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+        }
+
+        document.getElementById('captureBtn').addEventListener('click', () => {
+            if (!stream) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+            stopCamera();
+            const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+            previewImg.src = dataURL;
+            previewWrap.classList.remove('hidden');
+            cameraWrap.classList.add('hidden');
+            capturedInput.value = dataURL;
+        });
+
+        /* Submit */
+        form.addEventListener('submit', () => {
+            document.querySelector('.scan-card form').style.display = 'none';
+            loader.classList.remove('hidden');
+        });
+    })();
+    </script>
 </body>
 </html>

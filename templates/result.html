@@ -1,72 +1,280 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>Result - DermaScan AI</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="static/style/style.css" />
-
+    <meta charset="UTF-8">
+    <title>Analysis Result — DermaScan AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style/style.css">
     <style>
-    {% raw %}
-    .progress-circle {
-        width: 150px;
-        height: 150px;
-        border-radius: 50%;
-        background: conic-gradient(#0d6efd {% endraw %}{{ confidence }}{% raw %}%, #dee2e6 0%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 20px auto;
-        position: relative;
-    }
+        .result-page { padding: 30px 15px 60px; }
+        .result-container { max-width: 600px; margin: 0 auto; }
 
-    .progress-circle::before {
-        content: '';
-        position: absolute;
-        width: 120px;
-        height: 120px;
-        background: white;
-        border-radius: 50%;
-        z-index: 1;
-    }
+        /* Back link */
+        .back-link {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 0.85rem; font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            transition: var(--transition);
+        }
+        .back-link:hover { color: var(--crimson-light); transform: translateX(-3px); }
 
-    .progress-circle span {
-        position: relative;
-        font-size: 1.8rem;
-        font-weight: bold;
-        z-index: 2;
-    }
-    {% endraw %}
+        .result-card { padding: 36px; }
+
+        /* Header */
+        .result-header {
+            text-align: center;
+            padding-bottom: 24px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .result-header h2 {
+            font-size: 1.15rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .result-header h2 i { color: var(--crimson-light); }
+
+        /* Scanned image */
+        .scan-img {
+            width: 100%;
+            max-height: 260px;
+            object-fit: cover;
+            border-radius: var(--radius-md);
+            border: 2px solid var(--border-subtle);
+            margin-bottom: 24px;
+        }
+        .no-img {
+            height: 140px;
+            background: var(--bg-input);
+            border-radius: var(--radius-md);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: var(--text-dim); gap: 6px;
+            margin-bottom: 24px;
+        }
+
+        /* Diagnosis */
+        .diagnosis-block { text-align: center; margin-bottom: 28px; }
+
+        .diag-name {
+            font-size: 1.8rem;
+            font-weight: 900;
+            margin-bottom: 8px;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .diag-name i { font-size: 1.3rem; }
+
+        .diag-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            max-width: 480px;
+            margin: 12px auto 0;
+        }
+
+        /* Confidence gauge */
+        .gauge-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .gauge-label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 14px;
+        }
+
+        /* Prob section */
+        .prob-section { margin-bottom: 28px; }
+        .prob-section h4 {
+            font-size: 0.9rem; font-weight: 700;
+            margin-bottom: 16px;
+            display: flex; align-items: center; gap: 8px;
+            color: var(--text-light);
+        }
+        .prob-section h4 i { color: var(--crimson-light); font-size: 0.85rem; }
+
+        /* Divider */
+        .divider {
+            height: 1px;
+            background: var(--border-subtle);
+            margin: 28px 0;
+        }
+
+        /* Disclaimer */
+        .disclaimer {
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            line-height: 1.5;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-subtle);
+            margin-top: 24px;
+        }
+        .disclaimer i { margin-right: 4px; }
+
+        @media (max-width: 480px) {
+            .result-card { padding: 24px 20px; }
+            .diag-name { font-size: 1.4rem; }
+        }
     </style>
 </head>
-<body class="bg-gradient-primary d-flex justify-content-center align-items-center vh-100 text-dark">
-
-<div class="theme-toggle position-absolute top-0 end-0 p-3">
-    <input type="checkbox" id="darkToggle" class="form-check-input me-1" />
-    <label for="darkToggle" class="text-white">🌙 Dark Mode</label>
-</div>
-
-<div class="card p-5 text-center shadow-lg animate__animated animate__zoomIn" style="border-radius: 20px;" id="resultCard">
-    <h1 class="fw-bold mb-3 {{ 'text-danger' if label == 'Malignant' else 'text-success' }}">{{ label }}</h1>
-    
-    <!-- Graphical Confidence Meter -->
-    <div class="progress-circle">
-        <span>{{ confidence }}%</span>
+<body>
+    <div class="bg-mesh">
+        <div class="blob3"></div>
+        <div class="grid-overlay"></div>
     </div>
-    
-    <a href="/" class="btn btn-gradient mt-4 w-100">🔁 Scan Another</a>
-</div>
 
-<script>
-    const toggle = document.getElementById('darkToggle');
-    toggle.addEventListener('change', () => {
-        document.body.classList.toggle('dark-mode');
-        document.getElementById('resultCard').classList.toggle('bg-white');
-        document.getElementById('resultCard').classList.toggle('bg-dark');
-        document.getElementById('resultCard').classList.toggle('text-light');
+    <div class="result-page">
+        <div class="result-container">
+            <a href="/" class="back-link anim-fade-in">
+                <i class="fas fa-arrow-left"></i> Back to Scanner
+            </a>
+
+            <div class="glass result-card anim-fade-up">
+                <!-- Header -->
+                <div class="result-header">
+                    <h2><i class="fas fa-microscope"></i> Analysis Result</h2>
+                </div>
+
+                <!-- Scanned Image -->
+                {% if image_data %}
+                <img src="{{ image_data }}" alt="Scanned skin lesion" class="scan-img anim-fade-in">
+                {% else %}
+                <div class="no-img">
+                    <i class="fas fa-image fa-2x"></i>
+                    <span style="font-size:0.85rem;">No image available</span>
+                </div>
+                {% endif %}
+
+                <!-- Diagnosis -->
+                <div class="diagnosis-block">
+                    <div class="diag-name" style="color: {{ color }};">
+                        {% if risk_level == 'High' %}
+                        <i class="fas fa-triangle-exclamation"></i>
+                        {% else %}
+                        <i class="fas fa-circle-check"></i>
+                        {% endif %}
+                        {{ diagnosis_name }}
+                    </div>
+
+                    <span class="badge {{ 'badge-danger' if risk_level == 'High' else 'badge-success' }}">
+                        <i class="fas fa-{{ 'bolt' if risk_level == 'High' else 'shield-check' }}"></i>
+                        {{ risk_level }} Risk
+                    </span>
+
+                    <p class="diag-desc">{{ description }}</p>
+                </div>
+
+                <!-- Confidence Gauge -->
+                <div class="gauge-section">
+                    <div class="gauge-label">AI Confidence</div>
+                    <div class="progress-ring" id="gaugeRing">
+                        <svg width="160" height="160">
+                            <circle class="ring-bg" cx="80" cy="80" r="68" stroke-width="10"/>
+                            <circle class="ring-fill" cx="80" cy="80" r="68" stroke-width="10"
+                                    stroke="{{ color }}"
+                                    stroke-dasharray="{{ 2 * 3.14159 * 68 }}"
+                                    stroke-dashoffset="{{ 2 * 3.14159 * 68 }}"
+                                    data-target="{{ (confidence / 100) * 2 * 3.14159 * 68 }}"
+                                    id="ringFill"/>
+                        </svg>
+                        <span class="ring-label" id="gaugeValue">0%</span>
+                        <span class="ring-sublabel">confidence</span>
+                    </div>
+                </div>
+
+                <!-- Probability Breakdown -->
+                {% if all_probs %}
+                <div class="prob-section">
+                    <h4><i class="fas fa-chart-bar"></i> Probability Breakdown</h4>
+                    {% for item in all_probs %}
+                    <div class="prob-item">
+                        <div class="prob-header">
+                            <span class="prob-name">
+                                <span class="prob-dot" style="background:{{ item.color }};"></span>
+                                {{ item.name }}
+                                {% if item.risk == 'High' %}
+                                <span class="badge badge-danger" style="font-size:0.6rem; padding:2px 7px;">HIGH</span>
+                                {% endif %}
+                            </span>
+                            <span class="prob-value">{{ item.prob }}%</span>
+                        </div>
+                        <div class="prob-track">
+                            <div class="prob-fill" style="width:0%; background:{{ item.color }};" data-w="{{ item.prob }}"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="divider"></div>
+
+                <!-- Recommendations -->
+                <div class="rec-box mb-24">
+                    <h4><i class="fas fa-stethoscope"></i> Recommendations</h4>
+                    <ul>
+                        {% if risk_level == 'High' %}
+                        <li><strong>Consult a dermatologist</strong> as soon as possible for professional evaluation</li>
+                        <li>Monitor the lesion for changes in size, shape, color, or borders</li>
+                        <li>Protect the area from direct sunlight — use SPF 50+</li>
+                        <li>Do <strong>not</strong> attempt to remove or treat the lesion yourself</li>
+                        <li>Bring this AI report to your doctor as a reference point</li>
+                        {% else %}
+                        <li>The lesion appears benign — schedule a <strong>routine check</strong> with your dermatologist</li>
+                        <li>Continue monitoring the area for any changes over time</li>
+                        <li>Apply sunscreen (SPF 30+) when exposed to sunlight</li>
+                        <li>Perform monthly skin self-examinations</li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <!-- Scan Again -->
+                <a href="/" class="btn btn-primary btn-block btn-lg">
+                    <i class="fas fa-rotate-right"></i>
+                    <span>Scan Another Image</span>
+                </a>
+
+                <!-- Disclaimer -->
+                <div class="disclaimer">
+                    <i class="fas fa-info-circle"></i>
+                    This result is generated by an AI model and is <strong>not a medical diagnosis</strong>.
+                    Always consult a qualified healthcare provider for clinical evaluation.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        /* Animate confidence ring */
+        const fill = document.getElementById('ringFill');
+        const valEl = document.getElementById('gaugeValue');
+        const target = parseFloat(fill.dataset.target);
+        const circumference = parseFloat(fill.getAttribute('stroke-dasharray'));
+        const confidence = {{ confidence }};
+
+        setTimeout(() => {
+            fill.style.strokeDashoffset = circumference - target;
+        }, 400);
+
+        /* Animate counter */
+        let current = 0;
+        const step = confidence / 40;
+        const counter = setInterval(() => {
+            current += step;
+            if (current >= confidence) { current = confidence; clearInterval(counter); }
+            valEl.textContent = Math.round(current) + '%';
+        }, 25);
+
+        /* Animate probability bars */
+        document.querySelectorAll('.prob-fill').forEach(bar => {
+            const w = bar.dataset.w;
+            setTimeout(() => { bar.style.width = w + '%'; }, 600);
+        });
     });
-</script>
+    </script>
 </body>
 </html>

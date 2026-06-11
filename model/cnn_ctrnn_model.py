@@ -16,13 +16,13 @@ class CTRNNCell(nn.Module):
         return h
 
 class CNN_CTRNN(nn.Module):
-    def __init__(self, hidden_size=128):
+    def __init__(self, num_classes=7, hidden_size=128):
         super(CNN_CTRNN, self).__init__()
         base_model = resnet18(weights=ResNet18_Weights.DEFAULT)
         self.cnn = nn.Sequential(*list(base_model.children())[:-1])  # Remove FC layer
         self.flatten = nn.Flatten()
         self.ctrnn = CTRNNCell(512, hidden_size)
-        self.classifier = nn.Linear(hidden_size, 2)  # 2 classes: benign and malignant
+        self.classifier = nn.Linear(hidden_size, num_classes)
 
     def forward(self, x_seq):
         batch_size, seq_len, C, H, W = x_seq.size()
