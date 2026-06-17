@@ -41,4 +41,4 @@ set SMTP_PORT=587
 python train_model.py       # Train the CNN+CTRNN model (run from model/ dir)
 python app.py               # Start the Flask server
 ```
-Visit http://127.0.0.1:5000 in your browser.
+Visit https://huggingface.co/spaces/hitman454545/dermascan_AI in your browser.
