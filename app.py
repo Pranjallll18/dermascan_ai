@@ -1,14 +1,19 @@
 from flask import Flask, render_template, request, session, redirect, url_for
-import torch
-import torch.nn.functional as F
-import numpy as np
-import cv2
-from torchvision import transforms
-from auth import login_required, generate_otp, store_otp, send_otp_email, verify_otp
-from model.cnn_ctrnn_model import CNN_CTRNN
+import base64
 from io import BytesIO
 from PIL import Image
-import base64
+from auth import login_required, generate_otp, store_otp, send_otp_email, verify_otp
+
+try:
+    import torch
+    import torch.nn.functional as F
+
+    from torchvision import transforms
+    from model.cnn_ctrnn_model import CNN_CTRNN
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+    print("Warning: PyTorch not found. Running in UI-only mock mode.")
 
 app = Flask(__name__)
 app.secret_key = 'secret123'
@@ -63,18 +68,19 @@ CLASS_INFO = {
 }
 
 # --------- Load PyTorch model ---------
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = CNN_CTRNN(num_classes=NUM_CLASSES)
-model.load_state_dict(torch.load('model/model/skin_cancer_model.pth', map_location=device))
-model.to(device)
-model.eval()
+if HAS_TORCH:
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = CNN_CTRNN(num_classes=NUM_CLASSES)
+    model.load_state_dict(torch.load('model/model/skin_cancer_model.pth', map_location=device))
+    model.to(device)
+    model.eval()
 
-# --------- Image preprocessing (matches training normalization) ---------
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-])
+    # --------- Image preprocessing (matches training normalization) ---------
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
 
 @app.route('/')
 @login_required
@@ -168,9 +174,7 @@ def predict():
         file = request.files['image']
         if file.filename != '':
             file_bytes = file.read()
-            npimg = np.frombuffer(file_bytes, np.uint8)
-            img_np = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
-            img = Image.fromarray(cv2.cvtColor(img_np, cv2.COLOR_BGR2RGB))
+            img = Image.open(BytesIO(file_bytes)).convert('RGB')
             # Convert to base64 for display on result page
             encoded = base64.b64encode(file_bytes).decode('utf-8')
             image_data = f"data:image/jpeg;base64,{encoded}"
@@ -185,55 +189,73 @@ def predict():
                                color='#95a5a6',
                                all_probs=[])
 
-    # ---- Build multi-view sequence for CTRNN (matches training seq_len=4) ----
-    # View 0: base transform
-    view_base = transform(img)
+    if HAS_TORCH:
+        # ---- Build multi-view sequence for CTRNN (matches training seq_len=4) ----
+        # View 0: base transform
+        view_base = transform(img)
+    
+        # View 1: horizontal flip
+        tta_hflip = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.RandomHorizontalFlip(p=1.0),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+        # View 2: vertical flip
+        tta_vflip = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.RandomVerticalFlip(p=1.0),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+        # View 3: both flips
+        tta_both = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.RandomHorizontalFlip(p=1.0),
+            transforms.RandomVerticalFlip(p=1.0),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+    
+        views = torch.stack([view_base, tta_hflip(img), tta_vflip(img), tta_both(img)])
+        img_tensor = views.unsqueeze(0).to(device)  # [1, 4, C, H, W]
+    
+        with torch.no_grad():
+            output = model(img_tensor)
+            probs = F.softmax(output, dim=1)
+            pred = torch.argmax(probs, dim=1).item()
+            confidence = probs[0][pred].item()
+            
+            # Build per-class probability list for the result page
+            all_probs = []
+            for i, cls_code in enumerate(CLASS_NAMES):
+                info = CLASS_INFO[cls_code]
+                all_probs.append({
+                    'code': cls_code,
+                    'name': info['name'],
+                    'prob': round(probs[0][i].item() * 100, 2),
+                    'color': info['color'],
+                    'risk': info['risk'],
+                })
+    else:
+        # Mock prediction for UI testing
+        pred = 4 # 'mel' - melanoma
+        confidence = 0.854
+        all_probs = []
+        for i, cls_code in enumerate(CLASS_NAMES):
+            info = CLASS_INFO[cls_code]
+            prob = 85.4 if i == pred else 14.6 / (NUM_CLASSES - 1)
+            all_probs.append({
+                'code': cls_code,
+                'name': info['name'],
+                'prob': round(prob, 2),
+                'color': info['color'],
+                'risk': info['risk'],
+            })
 
-    # View 1: horizontal flip
-    tta_hflip = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.RandomHorizontalFlip(p=1.0),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-    # View 2: vertical flip
-    tta_vflip = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.RandomVerticalFlip(p=1.0),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-    # View 3: both flips
-    tta_both = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.RandomHorizontalFlip(p=1.0),
-        transforms.RandomVerticalFlip(p=1.0),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-
-    views = torch.stack([view_base, tta_hflip(img), tta_vflip(img), tta_both(img)])
-    img_tensor = views.unsqueeze(0).to(device)  # [1, 4, C, H, W]
-
-    with torch.no_grad():
-        output = model(img_tensor)
-        probs = F.softmax(output, dim=1)
-        pred = torch.argmax(probs, dim=1).item()
-        confidence = probs[0][pred].item()
-
-    # Build per-class probability list for the result page
-    all_probs = []
-    for i, cls_code in enumerate(CLASS_NAMES):
-        info = CLASS_INFO[cls_code]
-        all_probs.append({
-            'code': cls_code,
-            'name': info['name'],
-            'prob': round(probs[0][i].item() * 100, 2),
-            'color': info['color'],
-            'risk': info['risk'],
-        })
     # Sort by probability descending
     all_probs.sort(key=lambda x: x['prob'], reverse=True)
+
 
     predicted_class = CLASS_NAMES[pred]
     info = CLASS_INFO[predicted_class]

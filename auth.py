@@ -85,9 +85,10 @@ def send_otp_email(recipient_email, otp):
 
     # Dev mode fallback — print OTP to console
     if not smtp_email or not smtp_password:
-        print("=" * 50)
-        print(f"  [DEV MODE] OTP for {recipient_email}: {otp}")
-        print("=" * 50)
+        import sys
+        print("=" * 50, flush=True)
+        print(f"  [DEV MODE] OTP for {recipient_email}: {otp}", flush=True)
+        print("=" * 50, flush=True)
         return True
 
     # Build the email
